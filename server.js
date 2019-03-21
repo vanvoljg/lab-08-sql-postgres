@@ -1,5 +1,8 @@
 'use strict';
 
+// ============================================================================
+// SERVER CONFIGURATION
+// 
 require('dotenv').config();
 
 const superagent = require('superagent');
@@ -11,23 +14,14 @@ app.use(cors());
 
 const PORT = process.env.PORT;
 
-
+// ============================================================================
+// API ROUTES
 // location route, returns location object
 // Keys: search_query, formatted_query, latitude and longitude
 app.get('/location', getLocation);
-
 // weather route, returns an array of forecast objects
-// Keys: forecast, time
 app.get('/weather', getWeather);
 
-
-
-// TODO: create a getMeetups function
-// [ { link:,
-// name:,
-// creation_date:,
-// host:}, ]
-// app.get('/meetups', getMeetups);
 app.get('/meetups', getMeetups);
 
 // TODO: create a getYelp function
