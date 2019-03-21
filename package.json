@@ -1,0 +1,25 @@
+{
+  "name": "lab-06-back-end",
+  "version": "1.0.0",
+  "description": "backend for city explorer",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JagdeepSing/lab-06-back-end.git"
+  },
+  "author": "Jagdeep Singh, Trey Herndon",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JagdeepSing/lab-06-back-end/issues"
+  },
+  "homepage": "https://github.com/JagdeepSing/lab-06-back-end#readme",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^7.0.0",
+    "express": "^4.16.4",
+    "superagent": "^4.1.0"
+  }
+}
