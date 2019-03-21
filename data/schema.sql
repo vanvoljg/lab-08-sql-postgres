@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS weathers;
 DROP TABLE IF EXISTS locations;
+DROP TABLE IF EXISTS meetups;
 
 CREATE TABLE locations (
   id SERIAL PRIMARY KEY,
