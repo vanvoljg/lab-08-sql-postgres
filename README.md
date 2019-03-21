@@ -4,6 +4,7 @@ back end for city explorer app
 # Project Name
 
 **Author**: Jagdeep Singh
+
 **Version**: 1.0.0 (increment the patch/fix version number if you make more commits past your first submission)
 
 ## Overview
@@ -35,6 +36,7 @@ NPM packages in use: express, cors, dotenv, superagent
 
 ## Credits and Collaborations
 
+Collaborators: Trey Herndon, Jesse Van Volkinburg, Bonnie Wang
 
 Credit should be given to CodeFellows for providing all of the frontend javascript, html, and CSS. CodeFellows also gave guidance on the creation of the backend portion.
 
@@ -95,3 +97,26 @@ Start time: 10:35
 Finish time: 12:20
 
 Actual time: 1:45 hours
+
+## DAY 3
+
+Number and name of feature: 1, Database setup and table creation
+
+Estimate of time needed to complete: 20 minutes
+
+Start time: 09:10
+Finish time: 09:35
+
+Actual time: 25 minutes
+
+
+Number and name of feature: 2, Refactor API calls to use SQL
+
+Estimate of time needed to complete: 30 minutes
+
+Start time: 09:50
+Finish time: 
+
+Actual time: 
+
+
