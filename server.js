@@ -28,7 +28,7 @@ app.get('/location', getLocation);
 // weather route, returns an array of forecast objects
 app.get('/weather', getWeather);
 // Meetup route, returns an array of meetup objects
-// app.get('/meetups', getMeetups);
+app.get('/meetups', getMeetups);
 
 // TODO: create a getYelp function
 // app.get('/yelp', getYelp);
@@ -148,7 +148,7 @@ function getWeather(req, res) {
             else { // otherwise, process data through constructor
               const weatherSummaries = weatherResults.body.daily.data.map(day => {
                 let summary = new Forecast(day); // create Forecast object for each day
-                summary.id = query; // attach location id to each day's forecast
+                summary.location_id = query; // attach location id to each day's forecast
                 
                 // create query to insert data into db
                 let newSql = `INSERT INTO weathers(forecast,time,location_id) VALUES($1, $2, $3);`;
@@ -185,7 +185,44 @@ function Forecast(day) {
 //     .catch(error => handleError(error));
 // }
 
+function getMeetups(req, res) {
+  let query = req.query.data.id;
+  let sql = `SELECT * FROM meetups WHERE location_id=$1;`;
+  let values = [query];
 
+  client.query(sql, values)
+    .then(result => {
+      if (result.rowCount > 0) {
+        console.log('MEETUPS RESULT FROM SQL');
+        res.send(result.rows);
+      } else {
+        const url = `https://api.meetup.com/find/upcoming_events?lat=${req.query.data.latitude}&lon=${req.query.data.longitude}&sign=true&key=${process.env.MEETUP_API_KEY}&page=20`;
+
+        superagent.get(url)
+          .then(meetupResults => {
+            console.log('MEETUPS FROM API');
+            if (!meetupResults.body.events.length) throw 'NO DATA';
+            else {
+              const meetupArray = meetupResults.body.events.map(event => {
+                let meetup = new MeetupEvent(event);
+                meetup.location_id = query;
+
+                let newSql = `INSERT INTO meetups(link, name, creation_date, host, location_id) VALUES($1, $2, $3, $4, $5);`;
+                let newValues = Object.values(meetup);
+                
+                client.query(newSql, newValues);
+                
+                return meetup;
+              });
+              res.send(meetupArray);
+            }
+          })
+          .catch(error => handleError(error, res));
+      }
+    })
+    .catch(error => handleError(error, res));
+    
+}
 
 // Meetup event object constructor
 function MeetupEvent(event) {
