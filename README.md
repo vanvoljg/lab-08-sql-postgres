@@ -115,8 +115,8 @@ Number and name of feature: 2, Refactor API calls to use SQL
 Estimate of time needed to complete: 30 minutes
 
 Start time: 09:50
-Finish time: 
+Finish time: 11:20
 
-Actual time: 
+Actual time: 01:30
 
 
