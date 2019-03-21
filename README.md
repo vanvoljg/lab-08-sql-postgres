@@ -1,7 +1,5 @@
-# lab-06-back-end
+# City Explorer Back End
 back end for city explorer app
-
-# Project Name
 
 **Author**: Jagdeep Singh
 
