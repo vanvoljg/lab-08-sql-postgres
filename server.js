@@ -16,7 +16,7 @@ app.use(cors());
 const PORT = process.env.PORT;
 
 // Create client connection to DB
-const client = new pg.Client(process.env.POSTGRES_URL);
+const client = new pg.Client(process.env.DATABASE_URL);
 client.connect();
 client.on('error', error => console.error(error));
 
