@@ -290,3 +290,16 @@ function getTrails(req, res) {
       }
     });
 }
+
+function Trail(trailData) {
+  this.trail_url = trailData.url;
+  this.name = trailData.name;
+  this.location = trailData.location;
+  this.length = trailData.length;
+  this.condition_date = trailData.conditionDate.slice(0,10);
+  this.condition_time = trailData.conditionDAte.slice(11);
+  this.conditions = trailData.conditionStatus;
+  this.stars = trailData.stars;
+  this.star_votes = trailData.starVotes;
+  this.summary = trailData.summary;
+}
