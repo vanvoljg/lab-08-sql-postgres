@@ -29,6 +29,7 @@ app.get('/location', getLocation);
 app.get('/weather', getWeather);
 // Meetup route, returns an array of meetup objects
 app.get('/meetups', getMeetups);
+app.get('/yelp', getYelps);
 
 // TODO: create a getYelp function
 // app.get('/yelp', getYelp);
@@ -221,7 +222,6 @@ function getMeetups(req, res) {
       }
     })
     .catch(error => handleError(error, res));
-    
 }
 
 // Meetup event object constructor
@@ -230,4 +230,49 @@ function MeetupEvent(event) {
   this.name = event.name;
   this.creation_date = new Date(event.time).toString().slice(0, 15);
   this.host = event.group.name;
+}
+
+function getYelps(req, res){
+  let query = req.query.data.id;
+  let sql = `SELECT * FROM yelps WHERE location_id=$1;`;
+  let values = [query];
+
+  client.query(sql, values)
+    .then(result => {
+      if (result.rowCount > 0) {
+        console.log('YELP RESULT FROM SQL');
+        res.send(result.rows);
+      } else {
+        const url=`https://api.yelp.com/v3/businesses/search?latitude=${req.query.data.latitude}&longitude=${req.query.data.longitude}`;
+
+        superagent.get(url)
+          .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
+          .then(yelpResults => {
+            console.log('YELP FROM API');
+            if (!yelpResults.body.businesses.length) throw 'NO YELP DATA';
+            else {
+              const yelpArray = yelpResults.body.businesses.map(business => {
+                let yelp = new Yelp(business);
+                yelp.location_id = query;
+
+                let newSql = `INSERT INTO yelps(url, name, rating, price, image_url) VALUES($1, $2, $3, $4, $5) RETURNING id;`;
+                let newValues = Object.values(yelp);
+
+                client.query(newSql, newValues);
+                return yelp;
+              });
+              res.send(yelpArray);
+            }
+          })
+          .catch(error => handleError(error, res));
+      }
+    });
+}
+
+function Yelp(business) {
+  this.url = business.url;
+  this.name = business.name;
+  this.rating = business.rating;
+  this.price = business.price;
+  this.image_url = business.image_url
 }
