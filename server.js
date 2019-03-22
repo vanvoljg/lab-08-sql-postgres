@@ -197,7 +197,7 @@ function getYelps(req, res){
                 let yelp = new Yelp(business);
                 yelp.location_id = query;
 
-                let newSql = `INSERT INTO yelps(url, name, rating, price, image_url, location_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING id;`;
+                let newSql = `INSERT INTO yelps(url, name, rating, price, image_url, location_id) VALUES($1, $2, $3, $4, $5, $6);`;
                 let newValues = Object.values(yelp);
 
                 client.query(newSql, newValues);
@@ -286,7 +286,28 @@ function getTrails(req, res) {
         console.log('TRAILS DATA FROM DATABASE');
         res.send(result.rows);
       } else {
-        const url = `https://www.hikingproject.com/data/get-trails?lat=${req.query.data.latitude}&lon=${req.query.data.longitude}&key=${HIKING_API_KEY}&maxResults=20`;
+        const url = `https://www.hikingproject.com/data/get-trails?lat=${req.query.data.latitude}&lon=${req.query.data.longitude}&key=${process.env.HIKING_API_KEY}&maxResults=20`;
+
+        superagent.get(url)
+          .then(trailsResults => {
+            console.log('TRAILS DATA FROM API');
+            if (!trailsResults.body.trails.length === 0) throw 'NO TRAILS';
+            else {
+              const trailsArray = trailsResults.body.trails.map(trailData => {
+                console.log(trailData);
+                let trail = new Trail(trailData);
+                trail.location_id = query;
+
+                let newSql = `INSERT INTO trails(trail_url, name, location, length, condition_date, condition_time, conditions, stars, star_votes, summary, location_id) VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9 ,$10, $11);`;
+                let newValues = Object.values(trail);
+
+                client.query(newSql, newValues);
+                return trail;
+              });
+              res.send(trailsArray);
+            }
+          })
+          .catch(error => handleError(error));
       }
     });
 }
@@ -297,7 +318,7 @@ function Trail(trailData) {
   this.location = trailData.location;
   this.length = trailData.length;
   this.condition_date = trailData.conditionDate.slice(0,10);
-  this.condition_time = trailData.conditionDAte.slice(11);
+  this.condition_time = trailData.conditionDate.slice(11);
   this.conditions = trailData.conditionStatus;
   this.stars = trailData.stars;
   this.star_votes = trailData.starVotes;

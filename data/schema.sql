@@ -65,7 +65,7 @@ CREATE TABLE trails (
   conditions VARCHAR(255),
   stars NUMERIC(4),
   star_votes NUMERIC(8),
-  summary VARCHAR(255)
+  summary VARCHAR(255),
   location_id INTEGER NOT NULL,
   FOREIGN KEY (location_id) REFERENCES locations (id)
 );
