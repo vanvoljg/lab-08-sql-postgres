@@ -22,20 +22,15 @@ client.on('error', error => console.error(error));
 
 // ============================================================================
 // API ROUTES
-// location route, returns location object
-// Keys: search_query, formatted_query, latitude and longitude
 app.get('/location', getLocation);
-// weather route, returns an array of forecast objects
 app.get('/weather', getWeather);
-// Meetup route, returns an array of meetup objects
 app.get('/meetups', getMeetups);
 app.get('/yelp', getYelps);
-
-// TODO: create a getYelp function
-// app.get('/yelp', getYelp);
+app.get('/movies', getMovies);
+app.get('/trails', getTrails);
 
 // '*' route for invalid endpoints
-app.use('*', (req, res) => res.send('Sorry, that route does not exist'));
+// app.use('*', (req, res) => res.send('Sorry, that route does not exist'));
 
 app.listen(PORT, () => console.log(`Listening on PORT ${PORT}`));
 
@@ -46,58 +41,36 @@ function handleError(err, res) {
 
 // HELPER FUNCTIONS
 
-// PREVIOUS getLocation function
-// function getLocation(req, res){
-//   const mapsURL = `https://maps.googleapis.com/maps/api/geocode/json?key=${process.env.GOOGLE_MAPS_API_KEY}&address=${req.query.data}`;
-//   return superagent.get(mapsURL)
-//     .then(result => {
-//       res.send(new Location(result.body.results[0], req.query.data));
-//     })
-//     .catch(error => handleError(error));
-// }
-
-// takes search request and convert to location object
 function getLocation(req, res) {
-  // Check DB to see if location exists
   let query = req.query.data;
 
-  // Define the SQL query
   let sql = `SELECT * FROM locations WHERE search_query=$1;`;
   let values = [query];
 
-  // make databse query
   client.query(sql, values)
     .then( result => {
 
-      // if the location is in the database, return to front end
       if (result.rowCount > 0) {
         console.log('LOCATION FROM SQL');
         res.send(result.rows[0]);
       } else {
 
-        // if not in database, get data from API
         const url = `https://maps.googleapis.com/maps/api/geocode/json?key=${process.env.GOOGLE_MAPS_API_KEY}&address=${req.query.data}`;
         superagent.get(url)
           .then(data => {
             console.log('LOCATION FROM API');
 
-            // If there's an error or problem with the API
             if (!data.body.results.length) throw 'NO DATA';
-
-            // if there IS data
             else {
               let location = new Location(query, data.body.results[0]);
 
-              // Create query to add data to SQL db
               let newSql = `INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING id;`;
               let newValues = Object.values(location);
 
-              // insert data into DB and get the new ID, attach to object
               client.query(newSql, newValues)
                 .then(result => {
                   location.id = result.rows[0].id;
 
-                  // return location data to front end
                   res.send(location);
                 });
             }
@@ -115,53 +88,36 @@ function Location(query, data) {
   this.longitude = data.geometry.location.lng;
 }
 
-// returns array of daily forecasts
-// function getWeather(req, res) {
-//   const dark_sky_url = `https://api.darksky.net/forecast/${process.env.DARK_SKY_API_KEY}/${req.query.data.latitude},${req.query.data.longitude}`;
-
-//   return superagent.get(dark_sky_url)
-//     .then( weatherResult => {
-//       const weatherSummaries = weatherResult.body.daily.data.map((day) => {
-//         return new Forecast(day);
-//       });
-//       res.send(weatherSummaries);
-//     })
-//     .catch(error => handleError(error));
-// }
-
 function getWeather(req, res) {
-  let query = req.query.data.id; // internally, we use the unique id from the locations table to find unique data
-  // build sql query to get weather for current location
+  let query = req.query.data.id;
   let sql = `SELECT * FROM weathers WHERE location_id=$1;`;
   let values = [query];
-  // run query
   client.query(sql, values)
     .then(result => {
-      if (result.rowCount > 0) { // if we got data from SQL, send it back
+      if (result.rowCount > 0) {
         console.log('WEATHER RESULT FROM SQL');
         res.send(result.rows);
-      } else { // if we got no data from SQL, make API call to get data
+      } else {
         const url = `https://api.darksky.net/forecast/${process.env.DARK_SKY_API_KEY}/${req.query.data.latitude},${req.query.data.longitude}`;
         superagent.get(url)
           .then(weatherResults => {
             console.log('WEATHER FROM API');
-            if (!weatherResults.body.daily.data.length) throw 'NO DATA'; // if we get no data from API call, throw error
-            else { // otherwise, process data through constructor
+            if (!weatherResults.body.daily.data.length) throw 'NO DATA';
+            else {
               const weatherSummaries = weatherResults.body.daily.data.map(day => {
-                let summary = new Forecast(day); // create Forecast object for each day
-                summary.location_id = query; // attach location id to each day's forecast
+                let summary = new Forecast(day);
+                summary.location_id = query;
                 
-                // create query to insert data into db
                 let newSql = `INSERT INTO weathers(forecast,time,location_id) VALUES($1, $2, $3);`;
                 let newValues = Object.values(summary);
 
-                client.query(newSql, newValues);// insert data into DB
+                client.query(newSql, newValues);
                 return summary;
               });
-              res.send(weatherSummaries); // once weather array is created, send back to front end
+              res.send(weatherSummaries);
             }
           })
-          .catch(error => handleError(error, res)); // any superagent errors handled here
+          .catch(error => handleError(error, res));
       }
     });
 }
@@ -171,20 +127,6 @@ function Forecast(day) {
   this.forecast = day.summary;
   this.time = new Date(day.time*1000).toString().slice(0,15);
 }
-
-// returns array of 20 meetup objects
-// function getMeetups(req, res) {
-//   const meetupUrl = `https://api.meetup.com/find/upcoming_events?lat=${req.query.data.latitude}&lon=${req.query.data.longitude}&sign=true&key=${process.env.MEETUP_API_KEY}&page=20`;
-
-//   return superagent.get(meetupUrl)
-//     .then( meetupResults => {
-//       const meetupList = meetupResults.body.events.map((event) => {
-//         return new MeetupEvent(event);
-//       });
-//       res.send(meetupList);
-//     })
-//     .catch(error => handleError(error));
-// }
 
 function getMeetups(req, res) {
   let query = req.query.data.id;
@@ -255,7 +197,7 @@ function getYelps(req, res){
                 let yelp = new Yelp(business);
                 yelp.location_id = query;
 
-                let newSql = `INSERT INTO yelps(url, name, rating, price, image_url) VALUES($1, $2, $3, $4, $5) RETURNING id;`;
+                let newSql = `INSERT INTO yelps(url, name, rating, price, image_url, location_id) VALUES($1, $2, $3, $4, $5, $6) RETURNING id;`;
                 let newValues = Object.values(yelp);
 
                 client.query(newSql, newValues);
@@ -276,3 +218,62 @@ function Yelp(business) {
   this.price = business.price;
   this.image_url = business.image_url
 }
+
+function getMovies(req, res) {
+  let query = req.query.data.id;
+  let sql = `SELECT * FROM movies WHERE location_id=$1;`;
+  let values = [query];
+  client.query(sql, values)
+    .then(result => {
+      if (result.rowCount > 0) {
+        console.log('MOVIES RESULT FROM SQL');
+        res.send(result.rows);
+      } else {
+
+        let configUrl = `https://api.themoviedb.org/3/configuration?api_key=${process.env.MOVIEDBV3_API_KEY}`;
+        let imgUrlBase;
+
+        superagent.get(configUrl)
+          .then(configResult => {
+            console.log('MOVIES IMAGE URL BASE FROM API');
+            if (!configResult.body.images) throw 'NO CONFIG DATA';
+            else imgUrlBase = configResult.body.images.secure_base_url + configResult.body.images.poster_sizes[3];
+          })
+          .catch(error => handleError(error));        
+
+        let url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIEDBV3_API_KEY}&language=en-US&query=${req.query.data.search_query}`;
+
+        superagent.get(url)
+          .then(moviesResults => {
+            console.log('MOVIES FROM API');
+            if (!moviesResults.body.results.length) throw 'NO MOVIES DATA';
+            else {
+              const moviesArray = moviesResults.body.results.map(movieResult => {
+                let movie = new Movie(movieResult, imgUrlBase);
+                movie.location_id = query;
+
+                let newSql = `INSERT INTO movies(title, released_on, total_votes, average_votes, popularity, image_url, overview, location_id) VALUES($1, $2, $3, $4, $5, $6, $7, $8);`;
+                let newValues = Object.values(movie);
+
+                client.query(newSql, newValues);
+                return movie;
+              });
+              res.send(moviesArray);
+            }
+          })
+          .catch(error => handleError(error));
+      }
+    });
+}
+
+function Movie(movieResult, imgUrlBase) {
+  this.title = movieResult.title;
+  this.released_on = movieResult.release_date;
+  this.total_votes = movieResult.vote_count;
+  this.average_votes = movieResult.vote_average;
+  this.popularity = movieResult.popularity;
+  this.image_url = imgUrlBase + movieResult.poster_path;
+  this.overview = movieResult.overview;
+}
+
+

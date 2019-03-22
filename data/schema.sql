@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS movies;
 DROP TABLE IF EXISTS yelps;
 DROP TABLE IF EXISTS weathers;
 DROP TABLE IF EXISTS meetups;
@@ -36,6 +37,19 @@ CREATE TABLE yelps (
   rating INTEGER,
   price VARCHAR(255),
   image_url VARCHAR(255),
+  location_id INTEGER NOT NULL,
+  FOREIGN KEY (location_id) REFERENCES locations (id)
+);
+
+CREATE TABLE movies (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(255),
+  released_on VARCHAR(255),
+  total_votes INTEGER,
+  average_votes NUMERIC(16),
+  popularity NUMERIC(16),
+  image_url VARCHAR(255),
+  overview VARCHAR(511),
   location_id INTEGER NOT NULL,
   FOREIGN KEY (location_id) REFERENCES locations (id)
 );
