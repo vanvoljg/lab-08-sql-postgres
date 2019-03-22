@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS trails;
 DROP TABLE IF EXISTS movies;
 DROP TABLE IF EXISTS yelps;
 DROP TABLE IF EXISTS weathers;
@@ -50,6 +51,21 @@ CREATE TABLE movies (
   popularity NUMERIC(16),
   image_url VARCHAR(255),
   overview VARCHAR(511),
+  location_id INTEGER NOT NULL,
+  FOREIGN KEY (location_id) REFERENCES locations (id)
+);
+
+CREATE TABLE trails (
+  trail_url VARCHAR(255),
+  name VARCHAR(255),
+  location VARCHAR(255),
+  length NUMERIC(8),
+  condition_date VARCHAR(255),
+  condition_time VARCHAR(255),
+  conditions VARCHAR(255),
+  stars NUMERIC(4),
+  star_votes NUMERIC(8),
+  summary VARCHAR(255)
   location_id INTEGER NOT NULL,
   FOREIGN KEY (location_id) REFERENCES locations (id)
 );
