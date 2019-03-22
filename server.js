@@ -276,4 +276,17 @@ function Movie(movieResult, imgUrlBase) {
   this.overview = movieResult.overview;
 }
 
-
+function getTrails(req, res) {
+  let query = req.query.data.id;
+  let sql = `SELECT * FROM trails WHERE location_id=$1;`;
+  let values = [query];
+  client.query(sql, values)
+    .then(result => {
+      if (result.rowCount > 0) {
+        console.log('TRAILS DATA FROM DATABASE');
+        res.send(result.rows);
+      } else {
+        const url = `https://www.hikingproject.com/data/get-trails?lat=${req.query.data.latitude}&lon=${req.query.data.longitude}&key=${HIKING_API_KEY}&maxResults=20`;
+      }
+    });
+}
