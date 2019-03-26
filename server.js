@@ -71,7 +71,6 @@ function getLocation(req, res) {
   });
 }
 
-// Location object constructor
 function Location(query, data) {
   this.search_query = query;
   this.formatted_query = data.formatted_address;
@@ -115,7 +114,6 @@ function getWeather(req, res) {
   });
 }
 
-// Forecast object constructor
 function Forecast(day) {
   this.forecast = day.summary;
   this.time = new Date(day.time * 1000).toString().slice(0, 15);
@@ -163,7 +161,6 @@ function getMeetups(req, res) {
     .catch(error => handleError(error, res));
 }
 
-// Meetup event object constructor
 function MeetupEvent(event) {
   this.link = event.link;
   this.name = event.name;
