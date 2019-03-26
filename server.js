@@ -1,5 +1,6 @@
 'use strict';
 
+// SERVER CONFIGURATION
 require('dotenv').config();
 
 const superagent = require('superagent');
@@ -32,36 +33,42 @@ function handleError(err, res) {
   if (res) res.status(500).send('Sorry, something went wrong');
 }
 
+// HELPER FUNCTIONS
+
 function getLocation(req, res) {
   let query = req.query.data;
+
   let sql = `SELECT * FROM locations WHERE search_query=$1;`;
   let values = [query];
 
-  client.query(sql, values)
-    .then( result => {
-      if (result.rowCount > 0) {
-        console.log('LOCATION FROM SQL');
-        res.send(result.rows[0]);
-      } else {
-        const url = `https://maps.googleapis.com/maps/api/geocode/json?key=${process.env.GOOGLE_MAPS_API_KEY}&address=${req.query.data}`;
-        superagent.get(url)
-          .then(data => {
-            console.log('LOCATION FROM API');
-            if (!data.body.results.length) throw 'NO DATA';
-            else {
-              let location = new Location(query, data.body.results[0]);
-              let newSql = `INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING id;`;
-              let newValues = Object.values(location);
-              client.query(newSql, newValues)
-                .then(result => {
-                  location.id = result.rows[0].id;
-                  res.send(location);
-                });
-            }
-          })
-          .catch(error => handleError(error, res));
-      }
-    });
+  client.query(sql, values).then(result => {
+    if (result.rowCount > 0) {
+      console.log('LOCATION FROM SQL');
+      res.send(result.rows[0]);
+    } else {
+      const url = `https://maps.googleapis.com/maps/api/geocode/json?key=${process.env.GOOGLE_MAPS_API_KEY}&address=${req.query.data}`;
+      superagent
+        .get(url)
+        .then(data => {
+          console.log('LOCATION FROM API');
+
+          if (!data.body.results.length) throw 'NO DATA';
+          else {
+            let location = new Location(query, data.body.results[0]);
+
+            let newSql = `INSERT INTO locations(search_query, formatted_query, latitude, longitude) VALUES ($1, $2, $3, $4) RETURNING id;`;
+            let newValues = Object.values(location);
+
+            client.query(newSql, newValues).then(result => {
+              location.id = result.rows[0].id;
+
+              res.send(location);
+            });
+          }
+        })
+        .catch(error => handleError(error, res));
+    }
+  });
 }
 
 function Location(query, data) {
@@ -72,40 +79,44 @@ function Location(query, data) {
 }
 
 function getWeather(req, res) {
-  let query = req.query.data.id;
+  let query = req.query.data.id; // internally, we use the unique id from the locations table to find unique data
   let sql = `SELECT * FROM weathers WHERE location_id=$1;`;
   let values = [query];
-  client.query(sql, values)
-    .then(result => {
-      if (result.rowCount > 0) { 
-        console.log('WEATHER RESULT FROM SQL');
-        res.send(result.rows);
-      } else {
-        const url = `https://api.darksky.net/forecast/${process.env.DARK_SKY_API_KEY}/${req.query.data.latitude},${req.query.data.longitude}`;
-        superagent.get(url)
-          .then(weatherResults => {
-            console.log('WEATHER FROM API');
-            if (!weatherResults.body.daily.data.length) throw 'NO DATA';
-            else {
-              const weatherSummaries = weatherResults.body.daily.data.map(day => {
-                let summary = new Forecast(day);
-                let newSql = `INSERT INTO weathers(forecast,time,location_id) VALUES($1, $2, $3);`;
-                let newValues = Object.values(summary);
-
-                client.query(newSql, newValues);
-                return summary;
-              });
-              res.send(weatherSummaries);
-            }
-          })
-          .catch(error => handleError(error, res));
-      }
-    });
+  client.query(sql, values).then(result => {
+    if (result.rowCount > 0) {
+      // if we got data from SQL, send it back
+      console.log('WEATHER RESULT FROM SQL');
+      res.send(result.rows);
+    } else {
+      // if we got no data from SQL, make API call to get data
+      const url = `https://api.darksky.net/forecast/${process.env.DARK_SKY_API_KEY}/${req.query.data.latitude},${req.query.data.longitude}`;
+      superagent
+        .get(url)
+        .then(weatherResults => {
+          console.log('WEATHER FROM API');
+          if (!weatherResults.body.daily.data.length) throw 'NO DATA';
+          // if we get no data from API call, throw error
+          else {
+            // otherwise, process data through constructor
+            const weatherSummaries = weatherResults.body.daily.data.map(day => {
+              let summary = new Forecast(day); // create Forecast object for each day
+              summary.location_id = query; // attach location id to each day's forecast
+              let newSql = `INSERT INTO weathers(forecast,time,location_id) VALUES($1, $2, $3);`;
+              let newValues = Object.values(summary);
+              client.query(newSql, newValues); // insert data into DB
+              return summary;
+            });
+            res.send(weatherSummaries); // once weather array is created, send back to front end
+          }
+        })
+        .catch(error => handleError(error, res)); // any superagent errors handled here
+    }
+  });
 }
 
 function Forecast(day) {
   this.forecast = day.summary;
-  this.time = new Date(day.time*1000).toString().slice(0,15);
+  this.time = new Date(day.time * 1000).toString().slice(0, 15);
 }
 
 function getMeetups(req, res) {
@@ -113,15 +124,19 @@ function getMeetups(req, res) {
   let sql = `SELECT * FROM meetups WHERE location_id=$1;`;
   let values = [query];
 
-  client.query(sql, values)
+  client
+    .query(sql, values)
     .then(result => {
       if (result.rowCount > 0) {
         console.log('MEETUPS RESULT FROM SQL');
         res.send(result.rows);
       } else {
-        const url = `https://api.meetup.com/find/upcoming_events?lat=${req.query.data.latitude}&lon=${req.query.data.longitude}&sign=true&key=${process.env.MEETUP_API_KEY}&page=20`;
+        const url = `https://api.meetup.com/find/upcoming_events?lat=${req.query.data.latitude}&lon=${req.query.data.longitude}&sign=true&key=${
+          process.env.MEETUP_API_KEY
+        }&page=20`;
 
-        superagent.get(url)
+        superagent
+          .get(url)
           .then(meetupResults => {
             console.log('MEETUPS FROM API');
             if (!meetupResults.body.events.length) throw 'NO DATA';
@@ -132,9 +147,9 @@ function getMeetups(req, res) {
 
                 let newSql = `INSERT INTO meetups(link, name, creation_date, host, location_id) VALUES($1, $2, $3, $4, $5);`;
                 let newValues = Object.values(meetup);
-                
+
                 client.query(newSql, newValues);
-                
+
                 return meetup;
               });
               res.send(meetupArray);
